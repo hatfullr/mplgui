@@ -21,6 +21,9 @@ try:
         stderr = subprocess.STDOUT,
     )
     if p.stdout and ('FAILED' in p.stdout or 'Traceback' in p.stdout):
+        # This is a forgivable error, when we have no tests to run.
+        if "can't open file " in p.stdout and "tests/run_all_tests.py" in p.stdout and "No such file or directory" in p.stdout:
+            sys.exit(0)
         print(p.stdout)
         sys.exit(1)
 except subprocess.CalledProcessError as e:
