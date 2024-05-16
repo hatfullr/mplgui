@@ -1,5 +1,0 @@
-#!/bin/bash
-
-pip3 uninstall --verbose --yes mplgui
-
-\rm -rf *.egg-info
