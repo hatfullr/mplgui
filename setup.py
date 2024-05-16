@@ -27,6 +27,5 @@ setuptools.setup(
     install_requires = [
         'setuptools>=68.2.2',
         'numpy>=1.21.5',
-        'tkinter>=8.6.12',
     ],
 )
