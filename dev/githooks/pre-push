@@ -15,7 +15,7 @@ os.chdir(test_dir)
 try:
     p = subprocess.run(
         ['python3', 'run_all_tests.py'],
-        check = True,
+        check = False,
         text = True,
         stdout = subprocess.PIPE,
         stderr = subprocess.STDOUT,
