@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#python3 -m pip install --no-build-isolation -e .
+python3 -m build
+if [ $? -ne 0 ]; then
+    echo "Install failed"
+    exit 1
+fi
+
+python3 -m pip install --no-build-isolation -e .
+if [ $? -ne 0 ]; then
+    echo "Install failed"
+    exit 1
+fi
+
+# Import mplgui. If the version installed is not the most recent then
+# this will print a warning to the user.
+python3 -c 'import mplgui'
+if [ $? -ne 0 ]; then
+    exit 1
+fi
