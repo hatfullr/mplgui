@@ -400,7 +400,7 @@ def load_data():
             compression = zipfile.ZIP_DEFLATED
     ) as zfile:
         toload = zfile.read('data')
-    return json.loads(toload.decode('utf-8'))
+    return from_json(json.loads(toload.decode('utf-8')))
 
 def isParameterEqual(parameter, other):
     return get_param_difference_reason(parameter, other) is None
@@ -784,7 +784,8 @@ changed = (isDataChanged(previous_data, current_data) or
            isHashesChanged(previous_hashes, current_hashes))
 
 if not changed:
-    raise Exception("The code has not changed since the version number was last incremented.")
+    quit()
+    #raise Exception("The code has not changed since the version number was last incremented.")
 
 changes = detect_changes(previous_data, current_data)
 major_changes = []
