@@ -15,9 +15,19 @@ plt.show()
 ```
 
 This package works by defining a new type of Matplotlib backend, which is
-enforced upon import with `matplotlib.use('mplgui')`. The `mplgui` backend
-inherits from the `TkAgg` backend and extends its functionality. As such, `tk`
-is required by this package.
+enforced upon import with `matplotlib.use('module://mplgui.lib.backend')`. The
+`mplgui` backend inherits from the `TkAgg` backend and extends its
+functionality. As such, `tk` is required by this package.
 
+`mplgui` saves and loads figures with "project" files, which contain the pickled
+figure and some meta data. Use `mplgui.open` to open a project:
 
+```python3
+import matplotlib.pyplot as plt
+import mplgui
+
+mplgui.open('project.mpl')
+
+plt.show()
+```
 

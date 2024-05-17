@@ -4,7 +4,7 @@ import os
 import re
 import sys
 import mplgui
-import mplgui.helpers.versiontracker
+import mplgui.helpers.apidecorator
 import json
 import zipfile
 import inspect
@@ -747,7 +747,7 @@ def get_data():
     import importlib
     
     decorators = _get_decorators()
-    function = mplgui.helpers.versiontracker.track
+    function = mplgui.helpers.apidecorator.api
     func_name = '%s.%s' % (function.__module__, function.__qualname__)
     data = {}
     for obj in decorators.get(func_name, []):
@@ -784,8 +784,7 @@ changed = (isDataChanged(previous_data, current_data) or
            isHashesChanged(previous_hashes, current_hashes))
 
 if not changed:
-    quit()
-    #raise Exception("The code has not changed since the version number was last incremented.")
+    raise Exception("The code has not changed since the version number was last incremented.")
 
 changes = detect_changes(previous_data, current_data)
 major_changes = []
