@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+"""
 import subprocess
 import mplgui
 import os
@@ -32,3 +33,4 @@ except subprocess.CalledProcessError as e:
     sys.exit(1)
 
 sys.exit(0)
+"""

@@ -13,6 +13,7 @@ import copy
 import hashlib
 import typing
 from typing import *
+import warnings
 import matplotlib, numpy # Needed in some eval statements
 
 version_line_regex = "[vV][eE][rR][sS][iI][oO][nN]\\s*[=]\\s*[\"']\\d*[.]\\d*[.]\\d*[\"']"
@@ -784,7 +785,8 @@ changed = (isDataChanged(previous_data, current_data) or
            isHashesChanged(previous_hashes, current_hashes))
 
 if not changed:
-    raise Exception("The code has not changed since the version number was last incremented.")
+    warnings.warn("The code has not changed since the version number was last incremented.")
+    quit()
 
 changes = detect_changes(previous_data, current_data)
 major_changes = []
