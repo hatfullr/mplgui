@@ -63,6 +63,7 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         self._on_toolbar_changed()
 
     def _on_manager_changed(self, *args, **kwargs):
+        if self.manager is None: return
         # Override the "window.destroy" functionality to ask the user if they
         # want to quit when they have unsaved changes.
         
