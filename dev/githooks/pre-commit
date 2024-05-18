@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import subprocess
-import mplgui
+from mplgui import SOURCE_DIRECTORY
 import os
 import sys
 
 os.chdir(os.path.join(
-    mplgui.SOURCE_DIRECTORY,
+    SOURCE_DIRECTORY,
     'dev',
 ))
 
@@ -29,7 +29,7 @@ except subprocess.CalledProcessError as e:
 
 
 # Add our changes to the current commit
-os.chdir(mplgui.SOURCE_DIRECTORY)
+os.chdir(SOURCE_DIRECTORY)
 try:
     p = subprocess.run(
         ['git', 'add', 'pyproject.toml', 'dev/version_data.json.zip'],

@@ -1,3 +1,5 @@
+from mplgui.lib.menubar import FILE,OPEN,SAVE,EXPORT,CLOSE,EDIT,UNDO,REDO
+
 undo_history = 100
 
 # This is how long the messages appear on the plot, such as "Saving...",
@@ -11,15 +13,18 @@ message = {
     },
 }
 
+# These are tkinter event bindings (https://tcl.tk/man/tcl/TkCmd/bind.htm)
 hotkeys = {
     'MenuBar' : {
-        'File' : {
-            'Open project' : '<Control-o>',
-            'Save project' : '<Control-s>',
+        FILE : {
+            OPEN : '<Control-o>',
+            SAVE : '<Control-s>',
+            EXPORT: '<Control-e>',
+            CLOSE : '<Alt-F4>',
         },
-        'Edit' : {
-            'Undo' : '<Control-z>',
-            'Redo' : '<Control-y>',
+        EDIT : {
+            UNDO : '<Control-z>',
+            REDO : '<Control-y>',
         },
     },
 }

@@ -11,11 +11,22 @@ def showerror():
     import mplgui.lib.message
     mplgui.lib.message.ErrorMessage()
 
+def askquit(
+        title = 'Quit?',
+        text = 'Are you sure you want to quit?',
+        **kwargs
+):
+    from tkinter import messagebox
+    return messagebox.askyesno(title, text, **kwargs)
+
+
 
 class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
     def __init__(self, *args, **kwargs):
         import mplgui.lib.menubar
-        
+
+        self._toolbar = None
+        self._manager = None
         super(FigureCanvas, self).__init__(*args, **kwargs)
 
         self._state_index = tk.IntVar(value = 0)
@@ -24,38 +35,76 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
             self.get_tk_widget(),
             fig = self.figure,
         )
-        
+
+        self._base_state = None
         self._states = []
         self._recording_changes = True
         self._undo_history = mplgui.preferences.undo_history
         
         self.message = mplgui.lib.message.Message(self.get_tk_widget().winfo_toplevel())
+        
 
-        self.get_tk_widget().bind('<Map>', self._on_map, '+')
+    @property
+    def manager(self): return self._manager
+    @manager.setter
+    def manager(self, value):
+        # Do nothing if the manager hasn't changed
+        if value is self._manager: return
+        self._manager = value
+        self._on_manager_changed()
 
-    def _on_map(self, *args, **kwargs):
-        self.record_change()
-        self._override_delete_window_protocol()
+    @property
+    def toolbar(self): return self._toolbar
+    @toolbar.setter
+    def toolbar(self, value):
+        # Do nothing if the toolbar hasn't changed
+        if value is self._toolbar: return
+        self._toolbar = value
+        self._on_toolbar_changed()
 
-    def _override_delete_window_protocol(self, *args, **kwargs):
-        if self.manager is None: return
+    def _on_manager_changed(self, *args, **kwargs):
+        # Override the "window.destroy" functionality to ask the user if they
+        # want to quit when they have unsaved changes.
         
         # This is after Matplotlib has set their own protocol, so we can
         # interrupt that here.
         # https://github.com/matplotlib/matplotlib/blob/92a4b8d3c43bc9543d6f864e92e46367d11485fc/lib/matplotlib/backends/_backend_tk.py#L545
         def destroy(*args, **kwargs):
             from tkinter import messagebox
-            if len(self._states) > 0 and not messagebox.askyesno(
-                    'Quit?',
-                    'You have unsaved changes. Are you sure you want to quit?',
-            ):
-                return
+            # Only ask to close if the widget is currently mapped
+            if self.manager.window.winfo_ismapped():
+                if self.get_state() != self._base_state:
+                    if not askquit(detail = 'You have unsaved changes.'):
+                        return
             orig_protocol(*args, **kwargs)
             self.manager.window.quit() # This seems to be required
         
         orig_protocol = self.manager.destroy
         self.manager.destroy = destroy
-
+    
+    def _on_toolbar_changed(self, *args, **kwargs):
+        # Remove the "save" button in the toolbar. The functionality is now
+        # represented in the File -> Export menu. Refer to
+        # https://github.com/matplotlib/matplotlib/blob/55cf8c70214be559268719f0f1049f98c6c6731a/lib/matplotlib/backends/_backend_tk.py#L597
+        if self.toolbar is None: return
+        if not hasattr(self.toolbar, '_buttons'): return
+        if 'Save' not in self.toolbar._buttons.keys(): return
+        
+        # Figure out what kind of object the spacers are
+        spacer = self.toolbar._Spacer()
+        spacer_type = type(spacer)
+        spacer.destroy()
+            
+        # The pack slaves are ordered from left-to-right. Find the 'Save' button
+        # and delete it. If there is a spacer to its left, delete that too.
+        previous_slave = None
+        for i, slave in enumerate(self.toolbar.pack_slaves()):
+            if slave is self.toolbar._buttons['Save']:
+                if isinstance(previous_slave, spacer_type):
+                    previous_slave.pack_forget()
+                slave.pack_forget()
+                break
+            previous_slave = slave
     
     def record_change(self, *args, **kwargs):
         if not self._recording_changes: return
@@ -118,7 +167,9 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         state : :class:`~.State`
             The current figure state.
         """
-        if not self._states: self.record_change()
+        if not self._states:
+            self.record_change()
+            self._base_state = self._states[0]
         return self._states[self._state_index.get()]
 
     def get_window_title(self):
@@ -171,6 +222,12 @@ class State(object):
     A State is a snapshot of the canvas which can be used to completely restore
     the canvas.
     """
+
+    # These keys are ignored when comparing two States in __eq__
+    ignore = [
+        'filename',
+    ]
+    
     def __init__(self, canvas_or_bytes):
         if isinstance(canvas_or_bytes, FigureCanvas):
             self._data = {
@@ -205,6 +262,13 @@ class State(object):
                 continue
             diff += [key]
         return diff
+
+    def __eq__(self, other):
+        if not isinstance(other, State): return False
+        diff = self - other
+        for key in State.ignore:
+            if key in diff: diff.remove(key)
+        return len(diff) == 0
 
     @message
     def load(
@@ -244,13 +308,15 @@ class State(object):
                 fig.canvas.set_filename(self._data['filename'])
             else:
                 raise NotImplementedError("Unimplemented key '%s'" % key)
+
+        fig._base_state = self
         yield 'Loaded state'
 
     @message
     def save(self, path : str):
         """
         Save the state to disk. This sets the ``'filename'`` key in the data.
-
+        
         Parameters
         ----------
         path : str
