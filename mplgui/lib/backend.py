@@ -7,6 +7,7 @@ import mplgui.lib.message
 import mplgui.lib.artistmanager
 from mplgui.helpers.messagedecorator import message
 import matplotlib.pyplot as plt
+import os
 
 def showerror():
     import mplgui.lib.message
