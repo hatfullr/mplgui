@@ -3,14 +3,15 @@ from tkinter import ttk
 import matplotlib.artist
 import mplgui.widgets.verticalscrolledframe
 import mplgui.lib.backend
+import copy
 
 class ArtistViewer(tk.Frame, object):
     def __init__(
             self,
             *args,
             width : int = 200,
-            relief : str = 'sunken',
-            borderwidth : int = 1,
+            relief : str = 'flat',
+            borderwidth : int = 0,
             **kwargs
     ):
         self._artist = None
@@ -22,6 +23,7 @@ class ArtistViewer(tk.Frame, object):
             **kwargs
         )
         self._variable = tk.StringVar()
+        self._original_properties = None
         self._properties = {}
         self._create_widgets()
         self._create_bindings()
@@ -51,18 +53,33 @@ class ArtistViewer(tk.Frame, object):
         frame.pack(side = 'top', fill = 'x')
 
     def _create_bindings(self, *args, **kwargs):
+        def on_up_down(event):
+            selection = event.widget.curselection()[0]
+            if event.keysym == 'Up': selection += -1
+            if event.keysym == 'Down': selection += 1
+            if 0 <= selection < event.widget.size():
+                event.widget.selection_clear(0, tk.END)
+                event.widget.select_set(selection)
+        
+        def on_down(*args, **kwargs):
+            selection = self._names.curselection()[0]
+            self._names.select_set(min(selection + 1, self._names.size() - 1))
+        
+        self._names.bind('<Down>', on_up_down, '+')
+        self._names.bind('<Up>', on_up_down, '+')
         self._names.bind('<<ListboxSelect>>', self._on_select, '+')
 
     def _on_select(self, *args, **kwargs):
-        self._set_button.configure(state = 'normal')
-        self._entry.configure(state = 'normal')
+        if self._names.curselection():
+            self._set_button.configure(state = 'normal')
+            self._entry.configure(state = 'normal')
 
-        self._variable.set(
-            self._properties.get(
-                self._names.get(self._names.curselection()),
-                '',
-            ),
-        )
+            self._variable.set(
+                self._properties.get(
+                    self._names.get(self._names.curselection()),
+                    '',
+                ),
+            )
     
     def _on_set_pressed(self, *args, **kwargs):
         name = self._names.get(self._names.curselection())
@@ -72,16 +89,12 @@ class ArtistViewer(tk.Frame, object):
                 attr(self._variable.get())
             except:
                 attr(eval(self._variable.get()))
-            print("Now drawing", self._variable.get())
             canvas = self._artist.get_figure().canvas
-            canvas.draw()#renderer = canvas.get_renderer())
-            #fig.canvas.
-            #self._artist.get_figure().canvas.get_tk_widget().update()
+            canvas.draw()
+            canvas.blit()
         except:
             mplgui.lib.backend.showerror()
-        
-        
-
+    
     def get_artist(self): return self._artist
     
     def set_artist(
@@ -99,14 +112,19 @@ class ArtistViewer(tk.Frame, object):
         for s in setters:
             getter = 'get_'+s
             if hasattr(self._artist, getter):
-                self._properties[s] = getattr(self._artist, getter)()
-
+                obj = getattr(self._artist, getter)()
+                if obj.__class__.__module__ != 'builtins': continue
+                self._properties[s] = obj
+                
         names = sorted(list(self._properties.keys()))
-
+        
         self._names.delete(0, 'end')
         for name in names:
             self._names.insert('end', name)
 
         self._set_button.configure(state = 'disabled')
         self._entry.configure(state = 'disabled')
+
+        if self._original_properties is None:
+            self._original_properties = copy.deepcopy(self._properties)
 

@@ -13,8 +13,8 @@ class TestBackend(basetest.BaseTest, object):
         
         self.assertIs(type(fig.canvas), mplgui.lib.backend.FigureCanvas)
         
-        #if __name__ == '__main__':
-        #    plt.show()
+        if __name__ == '__main__':
+            plt.show()
         plt.close('all')
 
     def test_undo_history(self):
@@ -51,5 +51,4 @@ class TestBackend(basetest.BaseTest, object):
         
 if __name__ == '__main__':
     import unittest
-    TestBackend().test_open()
     unittest.main(failfast = True)

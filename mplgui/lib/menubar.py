@@ -7,7 +7,7 @@ import os
 # Labels for robust referencing
 FILE = 'File'
 EDIT = 'Edit'
-ARTISTS = 'Artists'
+FIGURE = 'Figure'
 ABOUT = 'About'
 
 OPEN = 'Open project...'
@@ -18,8 +18,8 @@ EXPORT_AS = 'Export image as...'
 CLOSE = 'Close'
 UNDO = 'Undo'
 REDO = 'Redo'
-SET_FIGURE_NAME = 'Set figure name'
-MANAGE_ARTISTS = 'Manage...'
+SET_FIGURE_NAME = 'Set name'
+MANAGE_ARTISTS = 'Manage artists...'
 
 class MenuBar(tk.Menu, object):
     mapping = collections.OrderedDict({
@@ -36,10 +36,10 @@ class MenuBar(tk.Menu, object):
         EDIT : {
             UNDO : 'self.fig.canvas.undo',
             REDO : 'self.fig.canvas.redo',
-            'Separator 0' : None,
-            SET_FIGURE_NAME : 'self.set_figure_name',
         },
-        ARTISTS : {
+        FIGURE : {
+            SET_FIGURE_NAME : 'self.set_figure_name',
+            'Separator 0' : None,
             MANAGE_ARTISTS : 'self.open_artist_manager',
         },
         ABOUT : 'self.show_about',

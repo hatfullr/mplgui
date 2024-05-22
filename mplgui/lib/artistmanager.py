@@ -60,7 +60,8 @@ class ArtistManager(tk.Toplevel, object):
 
     def _get_hierarchy(self, *args, **kwargs):
         def get(obj, keypath = ()):
-            name = obj.__class__.__name__
+            #name = obj.__class__.__name__
+            name = repr(obj)
             if isinstance(keypath, str): keypath = tuple([keypath])
             keypath = tuple(list(keypath) + [name])
             if len(keypath) == 1: keypath = keypath[0]
@@ -72,10 +73,9 @@ class ArtistManager(tk.Toplevel, object):
 
         hierarchy = mplgui.helpers.nesteddict.NestedDict()
         for child in self.canvas.figure.get_children():
-            hierarchy[child.__class__.__name__] = {'__object__' : child}
             for branch, obj in get(child):
-                if branch not in hierarchy:
-                    hierarchy[branch] = {'__object__' : obj}
+                hierarchy[branch] = {'__object__' : obj}
+        
         return hierarchy
     
     def update_hierarchy(self, *args, **kwargs):
@@ -98,9 +98,10 @@ class ArtistManager(tk.Toplevel, object):
                     # Create the parent
                     self._hierarchy[tuple(_branch)] = {
                         '__object__' : self.hierarchy.insert(
-                            parent, 'end', text = key,
+                            parent, 'end', text = leaf.__class__.__name__,
                         ),
                     }
+
 
     def hide(self, *args, **kwargs):
         self.withdraw()
