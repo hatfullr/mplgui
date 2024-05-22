@@ -4,8 +4,9 @@ import matplotlib.backends._backend_tk
 import matplotlib.figure
 import mplgui.lib.pickler
 import mplgui.lib.message
+import mplgui.lib.artistmanager
 from mplgui.helpers.messagedecorator import message
-import os
+import matplotlib.pyplot as plt
 
 def showerror():
     import mplgui.lib.message
@@ -19,16 +20,30 @@ def askquit(
     from tkinter import messagebox
     return messagebox.askyesno(title, text, **kwargs)
 
+class FigureManager(matplotlib.backends._backend_tk.FigureManagerTk, object):
+    def __init__(self, *args, **kwargs):
+        super(FigureManager, self).__init__(*args, **kwargs)
 
+    def destroy(self, *args, **kwargs):
+        if self.window.winfo_ismapped():
+            if self.canvas.get_state() != self.canvas._base_state:
+                if not askquit(detail = 'You have unsaved changes.'):
+                    return
+        return super(FigureManager, self).destroy(*args, **kwargs)
+        
 
 class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
+    manager_class = FigureManager
+    
     def __init__(self, *args, **kwargs):
         import mplgui.lib.menubar
 
         self._toolbar = None
         self._manager = None
-        super(FigureCanvas, self).__init__(*args, **kwargs)
+        self._artist_manager = None
 
+        super(FigureCanvas, self).__init__(*args, **kwargs)
+        
         self._state_index = tk.IntVar(value = 0)
 
         mplgui.lib.menubar.MenuBar(
@@ -42,17 +57,7 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         self._undo_history = mplgui.preferences.undo_history
         
         self.message = mplgui.lib.message.Message(self.get_tk_widget().winfo_toplevel())
-        
-
-    @property
-    def manager(self): return self._manager
-    @manager.setter
-    def manager(self, value):
-        # Do nothing if the manager hasn't changed
-        if value is self._manager: return
-        self._manager = value
-        self._on_manager_changed()
-
+    
     @property
     def toolbar(self): return self._toolbar
     @toolbar.setter
@@ -61,27 +66,6 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         if value is self._toolbar: return
         self._toolbar = value
         self._on_toolbar_changed()
-
-    def _on_manager_changed(self, *args, **kwargs):
-        if self.manager is None: return
-        # Override the "window.destroy" functionality to ask the user if they
-        # want to quit when they have unsaved changes.
-        
-        # This is after Matplotlib has set their own protocol, so we can
-        # interrupt that here.
-        # https://github.com/matplotlib/matplotlib/blob/92a4b8d3c43bc9543d6f864e92e46367d11485fc/lib/matplotlib/backends/_backend_tk.py#L545
-        def destroy(*args, **kwargs):
-            from tkinter import messagebox
-            # Only ask to close if the widget is currently mapped
-            if self.manager.window.winfo_ismapped():
-                if self.get_state() != self._base_state:
-                    if not askquit(detail = 'You have unsaved changes.'):
-                        return
-            orig_protocol(*args, **kwargs)
-            self.manager.window.quit() # This seems to be required
-        
-        orig_protocol = self.manager.destroy
-        self.manager.destroy = destroy
     
     def _on_toolbar_changed(self, *args, **kwargs):
         # Remove the "save" button in the toolbar. The functionality is now
@@ -145,6 +129,11 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         
 
     # Getters ----------------------------------
+
+    def get_artist_manager(self):
+        if self._artist_manager is not None: return self._artist_manager
+        self._artist_manager = mplgui.lib.artistmanager.ArtistManager(self)
+        return self._artist_manager
     
     def get_filename(self):
         title = self.get_window_title()
@@ -211,7 +200,8 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
     
     
     
-    
+
+        
     
 
     
@@ -237,7 +227,21 @@ class State(object):
                 'figure' : canvas_or_bytes.figure,
             }
         elif isinstance(canvas_or_bytes, bytes):
+            # Check if a figure has been opened yet at all
+            previous_canvas = None
+            if plt._pylab_helpers.Gcf.get_active() is not None:
+                # A figure is currently open
+                previous_canvas = plt.gcf().canvas # Get the current open canvas
+            
             self._data = mplgui.lib.pickler.unpickle(canvas_or_bytes)
+            # When the window has not been shown yet,
+            # The act of unpickling the data automatically creates a new window
+            # thanks to __setstate__ in the Figure class. We can't make
+            # matplotlib use a different default Figure class, so we need to
+            # correct its behavior here.
+            if previous_canvas:
+                previous_figure = self.figure
+                self.load(fig = previous_canvas.figure)
         else:
             raise TypeError("Argument 'canvas_or_bytes' must be of type mplgui.lib.backend.FigureCanvas or bytes, not '%s'" % type(canvas_or_bytes).__name__)
 
@@ -271,6 +275,10 @@ class State(object):
             if key in diff: diff.remove(key)
         return len(diff) == 0
 
+    @property
+    def figure(self): return self._data['figure']
+
+
     @message
     def load(
             self,
@@ -285,7 +293,6 @@ class State(object):
             The figure to load the state into. If `None`, the figure is obtained
             using :meth:`matplotlib.pyplot.gcf`.
         """
-        import matplotlib.pyplot as plt
         if fig is None: fig = plt.gcf()
 
         yield 'Loading state...'
@@ -294,22 +301,17 @@ class State(object):
         differences = self - current_state
         if not differences: return
         
-        # This has to go first
         if 'figure' in differences:
-            fig.canvas.get_tk_widget().destroy()
-            fig.canvas = FigureCanvas(self._data['figure'])
-            fig.canvas.get_tk_widget().pack()
+            fig.clear()
+            self.figure.set_canvas(fig.canvas)
+            fig.canvas.figure = self.figure
+            # Update the contents of the figure
+            self.figure.canvas.draw()
+            self.figure.canvas.blit()
         
-        for key in differences:
-            if key == 'figure': continue
-            
-            if key == 'name':
-                fig.canvas.set_name(self._data['name'])
-            elif key == 'filename':
-                fig.canvas.set_filename(self._data['filename'])
-            else:
-                raise NotImplementedError("Unimplemented key '%s'" % key)
-
+        fig.canvas.set_name(self._data['name'])
+        fig.canvas.set_filename(self._data['filename'])
+        
         fig._base_state = self
         yield 'Loaded state'
 
@@ -328,8 +330,8 @@ class State(object):
         --------
         :func:`~.load`
         """
-        self._data['figure'].canvas.set_filename(path)
-        self._data['filename'] = self._data['figure'].canvas.get_filename()
+        self.figure.canvas.set_filename(path)
+        self._data['filename'] = self.figure.canvas.get_filename()
         yield 'Saving...'
         data = mplgui.lib.pickler.pickle(self._data)
         with open(path, 'wb') as f:

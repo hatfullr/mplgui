@@ -1,4 +1,5 @@
 import tkinter as tk
+import _tkinter
 from tkinter import ttk
 import textwrap
 import traceback
@@ -43,9 +44,13 @@ class Message(ttk.Label, object):
         if self.level is not None:
             if level is None: return
             if level < self.level: return
-        self.configure(text = value)
         self.level = level
-        self.show()
+        try:
+            if self.winfo_ismapped():
+                self.configure(text = value)
+                self.show()
+        except _tkinter.TclError:
+            pass
     
     def get(self, *args, **kwargs):
         return str(self.cget('text'))

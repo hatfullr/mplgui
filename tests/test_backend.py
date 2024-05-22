@@ -9,11 +9,13 @@ class TestBackend(basetest.BaseTest, object):
 
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-
+        ax.plot([0, 1], [0, 1])
+        
         self.assertIs(type(fig.canvas), mplgui.lib.backend.FigureCanvas)
-
-        if __name__ == '__main__':
-            plt.show()
+        
+        #if __name__ == '__main__':
+        #    plt.show()
+        plt.close('all')
 
     def test_undo_history(self):
         import matplotlib.pyplot as plt
@@ -46,8 +48,8 @@ class TestBackend(basetest.BaseTest, object):
 
         mplgui.undo_history(100)
         self.assertEqual(len(fig.canvas._states), 1)
-
-
+        
 if __name__ == '__main__':
     import unittest
+    TestBackend().test_open()
     unittest.main(failfast = True)

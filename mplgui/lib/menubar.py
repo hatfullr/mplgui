@@ -7,6 +7,7 @@ import os
 # Labels for robust referencing
 FILE = 'File'
 EDIT = 'Edit'
+ARTISTS = 'Artists'
 ABOUT = 'About'
 
 OPEN = 'Open project...'
@@ -18,6 +19,7 @@ CLOSE = 'Close'
 UNDO = 'Undo'
 REDO = 'Redo'
 SET_FIGURE_NAME = 'Set figure name'
+MANAGE_ARTISTS = 'Manage...'
 
 class MenuBar(tk.Menu, object):
     mapping = collections.OrderedDict({
@@ -36,6 +38,9 @@ class MenuBar(tk.Menu, object):
             REDO : 'self.fig.canvas.redo',
             'Separator 0' : None,
             SET_FIGURE_NAME : 'self.set_figure_name',
+        },
+        ARTISTS : {
+            MANAGE_ARTISTS : 'self.open_artist_manager',
         },
         ABOUT : 'self.show_about',
     })
@@ -282,3 +287,6 @@ class MenuBar(tk.Menu, object):
             self.export()
         except:
             mplgui.lib.backend.showerror()
+
+    def open_artist_manager(self, *args, **kwargs):
+        self.fig.canvas.get_artist_manager().show()

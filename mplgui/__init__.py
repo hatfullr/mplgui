@@ -81,12 +81,8 @@ if BACKEND_IMPORTED:
         --------
         :func:`~.save`
         """
-        import matplotlib.pyplot as plt
         import builtins
         import mplgui.lib.backend
-
-        if fig is None: fig = plt.gcf()
-
         with builtins.open(path, 'rb') as f:
             content = f.read()
         state = mplgui.lib.backend.State(content)
