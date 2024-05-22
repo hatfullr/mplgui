@@ -3,7 +3,6 @@ from tkinter import ttk
 import matplotlib.artist
 import mplgui.widgets.verticalscrolledframe
 import mplgui.lib.backend
-import copy
 
 class ArtistViewer(tk.Frame, object):
     def __init__(
@@ -23,7 +22,6 @@ class ArtistViewer(tk.Frame, object):
             **kwargs
         )
         self._variable = tk.StringVar()
-        self._original_properties = None
         self._properties = {}
         self._create_widgets()
         self._create_bindings()
@@ -61,34 +59,44 @@ class ArtistViewer(tk.Frame, object):
                 event.widget.selection_clear(0, tk.END)
                 event.widget.select_set(selection)
         
-        def on_down(*args, **kwargs):
-            selection = self._names.curselection()[0]
-            self._names.select_set(min(selection + 1, self._names.size() - 1))
-        
         self._names.bind('<Down>', on_up_down, '+')
         self._names.bind('<Up>', on_up_down, '+')
         self._names.bind('<<ListboxSelect>>', self._on_select, '+')
 
+        self._variable.trace_add('write', self._on_variable_set)
+
+    def _on_variable_set(self, *args, **kwargs):
+        orig = str(self._properties[self._names.get(self._names.curselection())])
+        self._set_button.configure(
+            state = 'normal' if self._variable.get() != orig else 'disabled',
+        )
+        
     def _on_select(self, *args, **kwargs):
         if self._names.curselection():
-            self._set_button.configure(state = 'normal')
+            self._set_button.configure(state = 'disabled')
             self._entry.configure(state = 'normal')
-
+            
             self._variable.set(
-                self._properties.get(
+                str(self._properties.get(
                     self._names.get(self._names.curselection()),
                     '',
-                ),
+                ))
             )
     
     def _on_set_pressed(self, *args, **kwargs):
         name = self._names.get(self._names.curselection())
         try:
-            attr = getattr(self._artist, 'set_'+name)
+            text = self._variable.get()
+            get_attr = getattr(self._artist, 'get_'+name)
+            # Do nothing if nothing was changed
+            current = self._properties[self._names.get(self._names.curselection())]
+            if text == str(current): return 'break'
+            set_attr = getattr(self._artist, 'set_'+name)
             try:
-                attr(self._variable.get())
+                set_attr(text)
             except:
-                attr(eval(self._variable.get()))
+                set_attr(eval(text))
+            self._properties[self._names.get(self._names.curselection())] = getattr(self._artist, 'get_'+name)()
             canvas = self._artist.get_figure().canvas
             canvas.draw()
             canvas.blit()
@@ -105,9 +113,14 @@ class ArtistViewer(tk.Frame, object):
         self._update_widgets()
 
     def _update_widgets(self, *args, **kwargs):
+        curselection = self._names.curselection()
+        previous_name = None
+        if curselection:
+            previous_name = self._names.get(curselection)
+        
         inspector = matplotlib.artist.ArtistInspector(self._artist)
         setters = inspector.get_setters()
-
+        
         self._properties.clear()
         for s in setters:
             getter = 'get_'+s
@@ -115,16 +128,19 @@ class ArtistViewer(tk.Frame, object):
                 obj = getattr(self._artist, getter)()
                 if obj.__class__.__module__ != 'builtins': continue
                 self._properties[s] = obj
-                
+        
         names = sorted(list(self._properties.keys()))
         
         self._names.delete(0, 'end')
         for name in names:
             self._names.insert('end', name)
 
+        # Reset the selection back to what it was before
+        if curselection:
+            # Some values don't change, but that's because of the
+            # update_from method in Matplotlib, not our fault.
+            self._names.select_set(curselection)
+        
         self._set_button.configure(state = 'disabled')
         self._entry.configure(state = 'disabled')
-
-        if self._original_properties is None:
-            self._original_properties = copy.deepcopy(self._properties)
 
