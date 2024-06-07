@@ -3,8 +3,8 @@ from tkinter import ttk
 import mplgui.helpers.nesteddict
 import mplgui.widgets.scrolltreeview
 import mplgui.widgets.artistviewer
-import mplgui.lib.pickler
 from tkinter import messagebox
+import pickle
 
 class ArtistManager(tk.Toplevel, object):
     def __init__(self, canvas):
@@ -112,7 +112,7 @@ class ArtistManager(tk.Toplevel, object):
 
         self._artists = self._get_hierarchy()
         if self._original_artists is None:
-            self._original_artists = mplgui.lib.pickler.pickle(self._artists)
+            self._original_artists = pickle.dumps(self._artists)
         
         # Now populate with new values
         self._hierarchy = mplgui.helpers.nesteddict.NestedDict()
@@ -151,7 +151,7 @@ class ArtistManager(tk.Toplevel, object):
         self._reset_button.configure(state = 'disabled')
         self.update()
         
-        orig_artists = mplgui.lib.pickler.unpickle(self._original_artists)
+        orig_artists = pickle.loads(self._original_artists)
         
         for branch, leaf in orig_artists.flowers():
             if branch not in self._artists: continue

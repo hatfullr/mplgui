@@ -2,12 +2,12 @@ import tkinter as tk
 import matplotlib.backends.backend_tkagg
 import matplotlib.backends._backend_tk
 import matplotlib.figure
-import mplgui.lib.pickler
 import mplgui.lib.message
 import mplgui.lib.artistmanager
 from mplgui.helpers.messagedecorator import message
 import matplotlib.pyplot as plt
 import os
+import pickle
 
 def showerror():
     import mplgui.lib.message
@@ -234,7 +234,7 @@ class State(object):
                 # A figure is currently open
                 previous_canvas = plt.gcf().canvas # Get the current open canvas
             
-            self._data = mplgui.lib.pickler.unpickle(canvas_or_bytes)
+            self._data = pickle.loads(canvas_or_bytes)
             # When the window has not been shown yet,
             # The act of unpickling the data automatically creates a new window
             # thanks to __setstate__ in the Figure class. We can't make
@@ -334,8 +334,7 @@ class State(object):
         self.figure.canvas.set_filename(path)
         self._data['filename'] = self.figure.canvas.get_filename()
         yield 'Saving...'
-        data = mplgui.lib.pickler.pickle(self._data)
         with open(path, 'wb') as f:
-            f.write(data)
+            pickle.dump(self._data, f)
         yield 'Saved'
     
