@@ -24,6 +24,7 @@ class AxesToolbar(matplotlib.backends._backend_tk.NavigationToolbar2Tk, object):
 
         self.canvas.mpl_connect('motion_notify_event', self._on_mouse_motion)
         self.axes = None
+        self._ondraw_bid = None
 
     def _create_widgets(self, *args, **kwargs):
         self._buttons['Import']._image_file = IMPORT_IMAGE
@@ -35,23 +36,33 @@ class AxesToolbar(matplotlib.backends._backend_tk.NavigationToolbar2Tk, object):
             widget.destroy()
 
     def _on_mouse_motion(self, event):
-        if event.inaxes is not None:
-            if not self.winfo_ismapped():
-                pos = event.inaxes.get_position()
-                self.place(
-                    anchor = 'ne',
-                    relx = pos.x1,
-                    rely = pos.y0,
-                )
-        elif self.winfo_ismapped():
-            self.place_forget()
-        self.axes = event.inaxes
-
+        if event.inaxes is None: self.axes = None
+        else:
+            # Ignore colorbars
+            if not hasattr(event.inaxes, '_colorbar'):
+                self.axes = event.inaxes
+        self._update_position()
+    
     def _on_import_pressed(self, *args, **kwargs):
         ImportWindow(self.axes, self.winfo_toplevel())
         self.place_forget()
 
+    def _update_position(self, *args, **kwargs):
+        if self.axes is None:
+            if self.winfo_ismapped():
+                self.place_forget()
+                self.canvas.mpl_disconnect(self._ondraw_bid)
+                self._ondraw_bid = None
+        else:
+            pos = self.axes.get_position()
+            self.place(
+                anchor = 'ne',
+                relx = pos.x1,
+                rely = 1. - pos.y1,
+            )
 
+            if self._ondraw_bid is None:
+                self._ondraw_bid = self.canvas.mpl_connect('draw_event', self._update_position)
 
 class ImportWindow(tk.Toplevel, object):
     def __init__(self, axes, *args, **kwargs):
