@@ -15,12 +15,12 @@ if __file__.endswith(os.path.join('mplgui', 'mplgui','__init__.py')):
 else:
     SOURCE_DIRECTORY = os.path.dirname(os.path.dirname(util.find_spec('mplgui').origin))
 
+ICONS_DIRECTORY = os.path.join(SOURCE_DIRECTORY, 'icons')
 DATA_DIRECTORY = os.path.join(SOURCE_DIRECTORY, 'data')
 USER_DIRECTORY = os.path.join(DATA_DIRECTORY, 'user')
 DEFAULT_DIRECTORY = os.path.join(DATA_DIRECTORY, 'default')
 DEFAULT_PREFERENCES = os.path.join(DEFAULT_DIRECTORY, 'preferences.py')
 USER_PREFERENCES = os.path.join(USER_DIRECTORY, 'preferences.py')
-
 
 # Load preferences
 spec = util.spec_from_file_location('preferences', DEFAULT_PREFERENCES)

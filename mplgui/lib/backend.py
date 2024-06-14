@@ -2,7 +2,8 @@ import tkinter as tk
 import matplotlib.backends.backend_tkagg
 import matplotlib.backends._backend_tk
 import matplotlib.figure
-import mplgui.lib.message
+import mplgui.widgets.message
+import mplgui.widgets.axestoolbar
 import mplgui.lib.artistmanager
 from mplgui.helpers.messagedecorator import message
 import matplotlib.pyplot as plt
@@ -10,8 +11,8 @@ import os
 import pickle
 
 def showerror():
-    import mplgui.lib.message
-    mplgui.lib.message.ErrorMessage()
+    import mplgui.widgets.message
+    mplgui.widgets.message.ErrorMessage()
 
 def askquit(
         title = 'Quit?',
@@ -56,8 +57,8 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         self._states = []
         self._recording_changes = True
         self._undo_history = mplgui.preferences.undo_history
-        
-        self.message = mplgui.lib.message.Message(self.get_tk_widget().winfo_toplevel())
+
+        self._create_widgets()
     
     @property
     def toolbar(self): return self._toolbar
@@ -67,6 +68,11 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         if value is self._toolbar: return
         self._toolbar = value
         self._on_toolbar_changed()
+
+    def _create_widgets(self, *args, **kwargs):
+        widget = self.get_tk_widget()
+        self.message = mplgui.widgets.message.Message(widget.winfo_toplevel())
+        self.axes_toolbar = mplgui.widgets.axestoolbar.AxesToolbar(self, widget)
     
     def _on_toolbar_changed(self, *args, **kwargs):
         # Remove the "save" button in the toolbar. The functionality is now

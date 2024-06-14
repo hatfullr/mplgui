@@ -25,6 +25,7 @@ class ArtistViewer(tk.Frame, object):
         self._properties = {}
         self._create_widgets()
         self._create_bindings()
+        self._listeners = {}
 
     def _create_widgets(self, *args, **kwargs):
         self._names = tk.Listbox(
@@ -92,6 +93,8 @@ class ArtistViewer(tk.Frame, object):
             current = self._properties[self._names.get(self._names.curselection())]
             if text == str(current): return 'break'
             set_attr = getattr(self._artist, 'set_'+name)
+            for function in self._listeners.get('before set', []):
+                function(*args, **kwargs)
             try:
                 set_attr(text)
             except:
@@ -100,8 +103,17 @@ class ArtistViewer(tk.Frame, object):
             canvas = self._artist.get_figure().canvas
             canvas.draw()
             canvas.blit()
+            for function in self._listeners.get('after set', []):
+                function(*args, **kwargs)
         except:
             mplgui.lib.backend.showerror()
+
+    def add_listener(self, key, function):
+        if key not in self._listeners: self._listeners[key] = []
+        self._listeners[key] += [function]
+    def remove_listener(self, key, function):
+        self._listeners[key].pop(function)
+        if not self._listeners[key]: del self._listeners[key]
     
     def get_artist(self): return self._artist
     
@@ -125,7 +137,8 @@ class ArtistViewer(tk.Frame, object):
         for s in setters:
             getter = 'get_'+s
             if hasattr(self._artist, getter):
-                obj = getattr(self._artist, getter)()
+                try: obj = getattr(self._artist, getter)()
+                except: continue
                 if obj.__class__.__module__ != 'builtins': continue
                 self._properties[s] = obj
         
