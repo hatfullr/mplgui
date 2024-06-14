@@ -137,7 +137,8 @@ class ArtistViewer(tk.Frame, object):
         for s in setters:
             getter = 'get_'+s
             if hasattr(self._artist, getter):
-                obj = getattr(self._artist, getter)()
+                try: obj = getattr(self._artist, getter)()
+                except: continue
                 if obj.__class__.__module__ != 'builtins': continue
                 self._properties[s] = obj
         

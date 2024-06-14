@@ -26,7 +26,7 @@ def get_readers():
             spec = util.spec_from_file_location('default', path)
             module = util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            for _class in inspect.getmembers(module, inspect.isclass):
+            for string, _class in inspect.getmembers(module, inspect.isclass):
                 if issubclass(_class, Reader):
                     defaults += [_class]
 

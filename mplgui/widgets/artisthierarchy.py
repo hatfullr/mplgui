@@ -15,7 +15,8 @@ def get_artist_information(artist):
     for attr in inspector.get_setters():
         if not hasattr(artist, 'get_' + attr): continue
         if attr in ATTR_BLACKLIST: continue
-        info[attr] = getattr(artist, 'get_' + attr)()
+        try: info[attr] = getattr(artist, 'get_' + attr)()
+        except: continue
     return info
 
 def set_artist_information(artist, info):
