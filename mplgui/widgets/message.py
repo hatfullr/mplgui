@@ -5,6 +5,12 @@ import textwrap
 import traceback
 import sys
 import mplgui
+from tkinter import messagebox
+
+def ask(title = 'Are you sure?', text = '', **kwargs):
+    return messagebox.askyesno(title, text, **kwargs)
+
+def showerror(*args, **kwargs): ErrorMessage()
 
 class Message(ttk.Label, object):
     def __init__(
@@ -68,7 +74,7 @@ class Message(ttk.Label, object):
     
     
 
-class ErrorMessage(tk.Toplevel,object):
+class ErrorMessage(tk.Toplevel, object):
     width = 600
     height = 400
     
@@ -150,4 +156,6 @@ class ErrorMessage(tk.Toplevel,object):
         self.grab_set()
         self.transient()
         self.deiconify()
+
+
 

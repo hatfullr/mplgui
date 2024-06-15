@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 import matplotlib.artist
 import mplgui.widgets.verticalscrolledframe
-import mplgui.lib.backend
 
 class ArtistViewer(tk.Frame, object):
     def __init__(
@@ -86,27 +85,24 @@ class ArtistViewer(tk.Frame, object):
     
     def _on_set_pressed(self, *args, **kwargs):
         name = self._names.get(self._names.curselection())
+        text = self._variable.get()
+        get_attr = getattr(self._artist, 'get_'+name)
+        # Do nothing if nothing was changed
+        current = self._properties[self._names.get(self._names.curselection())]
+        if text == str(current): return 'break'
+        set_attr = getattr(self._artist, 'set_'+name)
+        for function in self._listeners.get('before set', []):
+            function(*args, **kwargs)
         try:
-            text = self._variable.get()
-            get_attr = getattr(self._artist, 'get_'+name)
-            # Do nothing if nothing was changed
-            current = self._properties[self._names.get(self._names.curselection())]
-            if text == str(current): return 'break'
-            set_attr = getattr(self._artist, 'set_'+name)
-            for function in self._listeners.get('before set', []):
-                function(*args, **kwargs)
-            try:
-                set_attr(text)
-            except:
-                set_attr(eval(text))
-            self._properties[self._names.get(self._names.curselection())] = getattr(self._artist, 'get_'+name)()
-            canvas = self._artist.get_figure().canvas
-            canvas.draw()
-            canvas.blit()
-            for function in self._listeners.get('after set', []):
-                function(*args, **kwargs)
+            set_attr(text)
         except:
-            mplgui.lib.backend.showerror()
+            set_attr(eval(text))
+        self._properties[self._names.get(self._names.curselection())] = getattr(self._artist, 'get_'+name)()
+        canvas = self._artist.get_figure().canvas
+        canvas.draw()
+        canvas.blit()
+        for function in self._listeners.get('after set', []):
+            function(*args, **kwargs)
 
     def add_listener(self, key, function):
         if key not in self._listeners: self._listeners[key] = []

@@ -3,6 +3,7 @@ from tkinter import ttk
 import mplgui.helpers.nesteddict
 import mplgui.widgets.artistviewer
 import mplgui.widgets.artisthierarchy
+import mplgui.widgets.message
 from tkinter import messagebox
 import pickle
 
@@ -68,10 +69,9 @@ class ArtistManager(tk.Toplevel, object):
         self.deiconify()
 
     def reset(self, *args, **kwargs):
-        # First ask
-        if not messagebox.askyesno(
-                'Reset all artists?',
-                'Reset all artists?',
+        if not mplgui.widgets.message.ask(
+                text = 'Reset all artists?',
+                title = 'Reset all artists?',
                 detail = 'This action cannot be undone.',
                 parent = self,
         ):

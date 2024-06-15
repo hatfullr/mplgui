@@ -10,17 +10,7 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 
-def showerror():
-    import mplgui.widgets.message
-    mplgui.widgets.message.ErrorMessage()
 
-def askquit(
-        title = 'Quit?',
-        text = 'Are you sure you want to quit?',
-        **kwargs
-):
-    from tkinter import messagebox
-    return messagebox.askyesno(title, text, **kwargs)
 
 class FigureManager(matplotlib.backends._backend_tk.FigureManagerTk, object):
     def __init__(self, *args, **kwargs):
@@ -29,7 +19,11 @@ class FigureManager(matplotlib.backends._backend_tk.FigureManagerTk, object):
     def destroy(self, *args, **kwargs):
         if self.window.winfo_ismapped():
             if self.canvas.get_state() != self.canvas._base_state:
-                if not askquit(detail = 'You have unsaved changes.'):
+                if not mplgui.widgets.message.ask(
+                        text = 'Are you sure you want to quit?',
+                        title = 'Quit?',
+                        detail = 'You have unsaved changes.'
+                ):
                     return
         return super(FigureManager, self).destroy(*args, **kwargs)
         
@@ -40,12 +34,15 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
     def __init__(self, *args, **kwargs):
         import mplgui.lib.menubar
 
+        # Send all errors to an error window in Tkinter
+        tk.Tk.report_callback_exception = mplgui.widgets.message.showerror
+        
         self._toolbar = None
         self._manager = None
         self._artist_manager = None
 
         super(FigureCanvas, self).__init__(*args, **kwargs)
-        
+
         self._state_index = tk.IntVar(value = 0)
 
         mplgui.lib.menubar.MenuBar(
@@ -59,6 +56,12 @@ class FigureCanvas(matplotlib.backends.backend_tkagg.FigureCanvasTkAgg, object):
         self._undo_history = mplgui.preferences.undo_history
 
         self._create_widgets()
+
+    @classmethod
+    def new_manager(cls, figure, num):
+        if num == -1: # -1 is reserved for the "Subplot configuration tool"
+            return matplotlib.backends.backend_tkagg.FigureCanvasTkAgg.new_manager(figure, num)
+        return super(FigureCanvas, cls).new_manager(figure, num)
     
     @property
     def toolbar(self): return self._toolbar

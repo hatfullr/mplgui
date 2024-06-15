@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 import collections
 import pathlib
 from mplgui.helpers.messagedecorator import message
@@ -147,72 +148,54 @@ class MenuBar(tk.Menu, object):
         )
 
     def show_open(self, *args, **kwargs):
-        import mplgui.lib.backend
-        try:
-            from tkinter import filedialog
-            import mplgui
-            
-            fname = filedialog.askopenfilename(
-                master = self.master,
-                title = OPEN,
-                filetypes = [('MPLGUI', '.mpl')],
-                defaultextension = '.mpl',
-            )
-            if fname in ['', ()]: return
+        import mplgui
 
-            mplgui.open(fname, fig = self.fig)
-            self.savepath = fname
-        except:
-            mplgui.lib.backend.showerror()
+        fname = filedialog.askopenfilename(
+            master = self.master,
+            title = OPEN,
+            filetypes = [('MPLGUI', '.mpl')],
+            defaultextension = '.mpl',
+        )
+        if fname in ['', ()]: return
+
+        mplgui.open(fname, fig = self.fig)
+        self.savepath = fname
 
     def show_save_as(self, *args, **kwargs):
-        import mplgui.lib.backend
-        try:
-            from tkinter import filedialog
-            import mplgui
-        
-            self.savepath = filedialog.asksaveasfilename(
-                master = self.master,
-                title = SAVE_AS,
-                filetypes = [('MPLGUI', '.mpl')],
-                defaultextension = '.mpl',
-                initialfile = self.fig.canvas.get_name(),
-            )
-            if self.savepath in ['', ()]:
-                self.savepath = None
-                return
+        import mplgui
 
-            mplgui.save(self.savepath, fig = self.fig)
-        except:
-            mplgui.lib.backend.showerror()
+        self.savepath = filedialog.asksaveasfilename(
+            master = self.master,
+            title = SAVE_AS,
+            filetypes = [('MPLGUI', '.mpl')],
+            defaultextension = '.mpl',
+            initialfile = self.fig.canvas.get_name(),
+        )
+        if self.savepath in ['', ()]:
+            self.savepath = None
+            return
+
+        mplgui.save(self.savepath, fig = self.fig)
 
     def save(self, *args, **kwargs):
-        import mplgui.lib.backend
-        try:
-            if self.savepath is None: self.show_save_as()
-            else:
-                mplgui.save(self.savepath, fig = self.fig)
-        except:
-            mplgui.lib.backend.showerror()
+        if self.savepath is None: self.show_save_as()
+        else:
+            mplgui.save(self.savepath, fig = self.fig)
 
     def set_figure_name(self, *args, **kwargs):
-        import mplgui.lib.backend
-        try:
-            from tkinter import simpledialog
-            
-            old_name = self.fig.canvas.get_name()
-            if old_name is None: old_name = ''
-            new_name = simpledialog.askstring(
-                SET_FIGURE_NAME,
-                'Enter the new figure name',
-                initialvalue = old_name,
-                parent = self.master,
-            )
-            if new_name is None or new_name == old_name: return
+        from tkinter import simpledialog
 
-            self.fig.canvas.set_name(new_name)
-        except:
-            mplgui.lib.backend.showerror()
+        old_name = self.fig.canvas.get_name()
+        if old_name is None: old_name = ''
+        new_name = simpledialog.askstring(
+            SET_FIGURE_NAME,
+            'Enter the new figure name',
+            initialvalue = old_name,
+            parent = self.master,
+        )
+        if new_name is None or new_name == old_name: return
+
+        self.fig.canvas.set_name(new_name)
     
     def update_undo_and_redo(self, *args, **kwargs):
         index = self.fig.canvas._state_index.get()
@@ -240,53 +223,48 @@ class MenuBar(tk.Menu, object):
         yield "Exported image"
     
     def export_as(self, *args, **kwargs):
-        import mplgui.lib.backend
-        try:
-            from tkinter import filedialog
-            import mplgui
-            
-            # Copying the code from https://github.com/matplotlib/matplotlib/blob/55cf8c70214be559268719f0f1049f98c6c6731a/lib/matplotlib/backends/_backend_tk.py#L837
-            filetypes = self.fig.canvas.get_supported_filetypes_grouped()
-            tk_filetypes = [
-                (name, " ".join(f"*.{ext}" for ext in exts))
-                for name, exts in sorted(filetypes.items())
-            ]
-            
-            default_extension = self.fig.canvas.get_default_filetype()
-            default_filetype = self.fig.canvas.get_supported_filetypes()[default_extension]
-            filetype_variable = tk.StringVar(
-                self.fig.canvas.get_tk_widget(), default_filetype,
-            )
-            
-            defaultextension = ''
-            
-            initialfile = pathlib.Path(self.fig.canvas.get_default_filename()).stem
-            
-            self._export_filename = filedialog.asksaveasfilename(
-                master = self.master,
-                title = EXPORT_AS,
-                filetypes = tk_filetypes,
-                defaultextension = defaultextension,
-                initialfile = self.fig.canvas.get_name(),
-                typevariable = filetype_variable,
-            )
-            if self._export_filename in ['', ()]:
-                self._export_filename = None
-                self._export_extension = None
-                return
+        import mplgui
 
+        # Copying the code from https://github.com/matplotlib/matplotlib/blob/55cf8c70214be559268719f0f1049f98c6c6731a/lib/matplotlib/backends/_backend_tk.py#L837
+        filetypes = self.fig.canvas.get_supported_filetypes_grouped()
+        tk_filetypes = [
+            (name, " ".join(f"*.{ext}" for ext in exts))
+            for name, exts in sorted(filetypes.items())
+        ]
+
+        default_extension = self.fig.canvas.get_default_filetype()
+        default_filetype = self.fig.canvas.get_supported_filetypes()[default_extension]
+        filetype_variable = tk.StringVar(
+            self.fig.canvas.get_tk_widget(), default_filetype,
+        )
+
+        defaultextension = ''
+
+        initialfile = pathlib.Path(self.fig.canvas.get_default_filename()).stem
+
+        self._export_filename = filedialog.asksaveasfilename(
+            master = self.master,
+            title = EXPORT_AS,
+            filetypes = tk_filetypes,
+            defaultextension = defaultextension,
+            initialfile = self.fig.canvas.get_name(),
+            typevariable = filetype_variable,
+        )
+        if self._export_filename in ['', ()]:
+            self._export_filename = None
             self._export_extension = None
-            if pathlib.Path(self._export_filename).suffix[1:] == "":
-                self._export_extension = filetypes[filetype_variable.get()][0]
-            
-            self.menus[FILE].entryconfig(
-                list(MenuBar.mapping[FILE].keys()).index(EXPORT),
-                label = '{:s} ({:s})'.format(EXPORT, os.path.basename(self._export_filename)),
-            )
-            
-            self.export()
-        except:
-            mplgui.lib.backend.showerror()
+            return
+
+        self._export_extension = None
+        if pathlib.Path(self._export_filename).suffix[1:] == "":
+            self._export_extension = filetypes[filetype_variable.get()][0]
+
+        self.menus[FILE].entryconfig(
+            list(MenuBar.mapping[FILE].keys()).index(EXPORT),
+            label = '{:s} ({:s})'.format(EXPORT, os.path.basename(self._export_filename)),
+        )
+
+        self.export()
 
     def open_artist_manager(self, *args, **kwargs):
         self.fig.canvas.get_artist_manager().show()
