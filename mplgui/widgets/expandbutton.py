@@ -1,8 +1,8 @@
 from tkinter import ttk
 import tkinter as tk
+import mplgui.widgets.switchbutton
 
-
-class ExpandButton(tk.Checkbutton, object):
+class ExpandButton(mplgui.widgets.switchbutton.SwitchButton, object):
     def __init__(
             self,
             *args,
@@ -10,13 +10,11 @@ class ExpandButton(tk.Checkbutton, object):
             expand = None,
             textvariable = None,
             variable = None,
-            indicatoron = False,
-            offrelief = 'flat',
-            overrelief = 'groove',
-            borderwidth = 1,
+            use_text = True,
             **kwargs
     ):
-        self._textvariable = tk.StringVar()
+        if use_text: self._textvariable = tk.StringVar()
+        else: self._textvariable = None
         
         if variable is None: variable = tk.BooleanVar()
         self._variable = variable
@@ -24,10 +22,6 @@ class ExpandButton(tk.Checkbutton, object):
             *args,
             textvariable = self._textvariable,
             variable = self._variable,
-            indicatoron = indicatoron,
-            offrelief = offrelief,
-            overrelief = overrelief,
-            borderwidth = borderwidth,
             **kwargs
         )
         self._expandedvalue = None
@@ -39,10 +33,12 @@ class ExpandButton(tk.Checkbutton, object):
 
         def on_var_changed(*args, **kwargs):
             if variable.get():
-                self._textvariable.set(self._expandedvalue)
+                if self._textvariable is not None:
+                    self._textvariable.set(self._expandedvalue)
                 self.event_generate('<<Expand>>')
             else:
-                self._textvariable.set(self._collapsedvalue)
+                if self._textvariable is not None:
+                    self._textvariable.set(self._collapsedvalue)
                 self.event_generate('<<Collapse>>')
         
         variable.trace_add('write', on_var_changed)
@@ -73,5 +69,6 @@ class ExpandButton(tk.Checkbutton, object):
                 self._expandedvalue = '^'
                 self._collapsedvalue = 'v'
 
-        if self._variable.get(): self._textvariable.set(self._expandedvalue)
-        else: self._textvariable.set(self._collapsedvalue)
+        if self._textvariable is not None:
+            if self._variable.get(): self._textvariable.set(self._expandedvalue)
+            else: self._textvariable.set(self._collapsedvalue)

@@ -30,3 +30,13 @@ hotkeys = {
 }
 
 
+# Controls the highlighting when the mouse hovers over an Axes. This dict is
+# used on each spine of the Axes. Each dict item must correspond to a keyword
+# value in the artist constructor.
+axes_highlight = {
+    'edgecolor' : 'r',
+    'facecolor' : 'none',
+    'lw' : 1,
+    'linestyle' : '--',
+    'zorder' : float('inf'),
+}

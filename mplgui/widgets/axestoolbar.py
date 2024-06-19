@@ -7,6 +7,8 @@ import matplotlib.backends._backend_tk
 import collections
 import mplgui.widgets.message
 import mplgui.widgets.expandbutton
+import mplgui.lib.axeshighlight
+import mplgui.widgets.tooltip
 
 IMPORT_IMAGE = os.path.join(mplgui.ICONS_DIRECTORY, 'import_large.png')
 ERASE_IMAGE = os.path.join(mplgui.ICONS_DIRECTORY, 'erase_large.png')
@@ -18,13 +20,12 @@ class AxesToolbar(matplotlib.backends._backend_tk.NavigationToolbar2Tk, object):
     )
     
     def __init__(self, *args, **kwargs):
-        self.is_expanded = tk.BooleanVar(value = True)
-        
         kwargs['pack_toolbar'] = False
         super(AxesToolbar, self).__init__(*args, **kwargs)
         
+        self._highlight = mplgui.lib.axeshighlight.AxesHighlight()
         self.axes = None
-        self._ondraw_bid = None
+        self._spacers = []
         
         self._create_widgets()
         self._create_bindings()
@@ -33,36 +34,71 @@ class AxesToolbar(matplotlib.backends._backend_tk.NavigationToolbar2Tk, object):
         self._buttons['Import']._image_file = IMPORT_IMAGE
         self._buttons['Erase']._image_file = ERASE_IMAGE
         
+        self._buttons['Import'].master.configure(
+            relief = 'raised', padx = 2, pady = 2,
+        )
+        
+        for button in self._buttons.values():
+            button.pack_forget()
+        
         for key, button in self._buttons.items():
             button.configure(relief = 'raised')
+            if key == 'Expand': continue
             self._set_image_for_button(button)
         
         for widget in self.winfo_children():
             if widget in self._buttons.values(): continue
             widget.destroy()
 
+        self._highlight_on = tk.BooleanVar()
+        height = self._buttons['Import'].winfo_reqheight()
+
         self._expand_button = mplgui.widgets.expandbutton.ExpandButton(
-            self._buttons['Import'].master,
-            width = 1,
-            height = 1,
-        )
-        self._expand_button.pack(
-            side = 'left',
-            anchor = 'ne',
+            self,
+            width = 0,
+            height = height,
+            use_text = False,
         )
         self._expand_button.toggle()
+        self._expand_tooltip = mplgui.widgets.tooltip.ToolTip(
+            self._expand_button, text = 'Collapse',
+        )
+        
+        self._highlight_on = tk.BooleanVar(value = True)
+        def command(*args, **kwargs):
+            self._highlight.toggle()
+            self.canvas.draw_idle()
+            
+        self._highlight_button = mplgui.widgets.switchbutton.SwitchButton(
+            self,
+            text = 'H',
+            variable = self._highlight_on,
+            command = command,
+            width = 2,
+        )
+        highlight_tooltip = mplgui.widgets.tooltip.ToolTip(
+            self._highlight_button,
+            text = 'Unhighlight',
+        )
+        def hglt(*args, **kwargs):
+            if self._highlight_on.get():
+                highlight_tooltip.text = 'Unhighlight'
+            else: highlight_tooltip.text = 'Highlight'
+        self._highlight_on.trace('w', hglt)
+        
+        self.pack()
 
-
+    
     def _create_bindings(self, *args, **kwargs):
-        self.canvas.mpl_connect('motion_notify_event', self._update_position)
-        self.canvas.mpl_connect('figure_leave_event', self._update_position)
+        self.canvas.mpl_connect('axes_enter_event', self._on_axes_enter)
+        self.canvas.mpl_connect('axes_leave_event', self._on_axes_leave)
         self._expand_button.bind('<<Expand>>', self._on_expand, '+')
         self._expand_button.bind('<<Collapse>>', self._on_collapse, '+')
         
     def _on_import_pressed(self, *args, **kwargs):
         ImportWindow(self.axes, self.winfo_toplevel())
-        self.place_forget()
-
+        self.hide()
+    
     def _on_erase_pressed(self, *args, **kwargs):
         if mplgui.widgets.message.ask(
                 title = 'Clear the Axes?',
@@ -79,42 +115,65 @@ class AxesToolbar(matplotlib.backends._backend_tk.NavigationToolbar2Tk, object):
                 except NotImplementedError: pass
             
             self.canvas.draw()
-            self.canvas.blit()
-
+    
     def _on_expand(self, *args, **kwargs):
-        self._expand_button.pack(side = 'right')
-        for button in self._buttons.values():
-            button.pack(side = 'left')
+        self._expand_tooltip.text = 'Collapse'
+        self.pack()
     
     def _on_collapse(self, *args, **kwargs):
-        for button in self._buttons.values():
-            button.pack_forget()
+        for spacer in self._spacers: spacer.destroy()
+        self._spacers = []
+        for button in self._buttons.values(): button.pack_forget()
+        self._highlight_button.pack_forget()
+        self._expand_button.pack(side = 'right', padx = 0)
+        self._expand_tooltip.text = 'Expand'
+    
+    def _on_axes_enter(self, event):
+        self.show(event.inaxes)
 
-    def _update_position(self, event = None):
-        if event is not None:
-            if hasattr(event, 'inaxes'):
-                if event.inaxes is None: self.axes = None
-                else:
-                    # Ignore colorbars
-                    if hasattr(event.inaxes, '_colorbar'): self.axes = None
-                    else: self.axes = event.inaxes
-            else: self.axes = None
+    def _on_axes_leave(self, event):
+        self.hide()
+
+    def _Spacer(self):
+        return tk.Frame(master=self, height='18p', relief=tk.RIDGE, bg='DarkGray')
+
+    def pack(self, *args, **kwargs):
+        for spacer in self._spacers: spacer.destroy()
+        self._spacers = []
         
-        if self.axes is None:
-            if self.winfo_ismapped():
-                self.place_forget()
-                self.canvas.mpl_disconnect(self._ondraw_bid)
-                self._ondraw_bid = None
-        else:
-            pos = self.axes.get_position()
-            self.place(
-                anchor = 'ne',
-                relx = pos.x1,
-                rely = 1. - pos.y1,
-            )
+        self._expand_button.pack(side = 'right', padx = ('6p',0))
+        self._highlight_button.pack(side = 'right')
+        self._spacers += [self._Spacer()]
+        self._spacers[-1].pack(side = 'right', padx='3p')
+        for button in self._buttons.values():
+            button.pack(side = 'left')
+        
+    def hide(self, *args, **kwargs):
+        if self.winfo_ismapped():
+            self.place_forget()
+            
+            need_draw = self._highlight.get_visible()
+            self._highlight.set_visible(False)
+            if need_draw: self.canvas.draw_idle()
+        
+        self.axes = None
 
-            if self._ondraw_bid is None:
-                self._ondraw_bid = self.canvas.mpl_connect('draw_event', self._update_position)
+    def show(self, axes):
+        if hasattr(axes, '_colorbar'): return
+        
+        pos = axes.get_position()
+        self.place(
+            anchor = 'ne',
+            relx = pos.x1,
+            rely = 1. - pos.y1,
+        )
+
+        if self._highlight.axes != axes:
+            self._highlight.set_axes(axes)
+        need_draw = self._highlight.get_visible() != self._highlight_on.get()
+        self._highlight.set_visible(self._highlight_on.get())
+        if need_draw: self.canvas.draw_idle()
+        self.axes = axes
 
 class ImportWindow(tk.Toplevel, object):
     def __init__(self, axes, *args, **kwargs):
